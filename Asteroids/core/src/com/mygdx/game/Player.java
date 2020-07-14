@@ -2,10 +2,13 @@ package com.mygdx.game;
 
 public class Player extends Shape{ //TODO - MAYBE ADD A SENSE OF SCALE / TIME
 	private Vec2D acceleration, direction;
+	private int lives, score;
 
 	public Player(float[][] vertices) {
 		super(vertices);
 		//this.type = "Player";
+		this.lives = 2;
+		this.score = 0;
 		this.acceleration = new Vec2D(0, 0);
 		this.findDirection();
 	}
@@ -49,5 +52,21 @@ public class Player extends Shape{ //TODO - MAYBE ADD A SENSE OF SCALE / TIME
 	
 	public void setDirection(Vec2D value) {
 		direction = value;
+	}
+	
+	public int getLives() {
+		return lives;
+	}
+	
+	public void setLives(int value) {
+		lives = value;
+	}
+	
+	public int getScore() {
+		return score;
+	}
+	
+	public void setScore(int value) {
+		score = value;
 	}
 }

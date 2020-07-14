@@ -7,26 +7,34 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input.Keys;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType;
 
 public class Asteroids extends ApplicationAdapter {
 	ShapeRenderer sr;
+	SpriteBatch batch;
+	BitmapFont font;
+	
 	Random random = new Random();
 	//((Player)shapes[0][0]) ((Player)shapes[0][0]) = new ((Player)shapes[0][0])(new float[][] {{0, 0}, {20, 0}, {10, 40}});
 	//Bullet[] bullets = new Bullet[0];
 	float width = 640, height = 480;
 	
-	float[][][] asteroidVertices = new float[][][] {{{0, 0}, {-10, 10}, {-4, 20}, {0, 14}, {10, 18}, {12, 4}}}; //all possible asteroids (1 currently) 
+	float[][][] asteroidVertices = new float[][][] {{{0, 0}, {-10, 10}, {-4, 20}, {0, 14}, {10, 18}, {12, 4}},
+													{{-10, 0}, {10, 1}, {9, 10}, {6, 9}, {3, 20}, {-5, 16}}, 
+													{{-12, -4}, {6, 2}, {8, 8}, {2, 19}, {-4, 18}, {-7, 5}, {-9, 7}}}; //all possible asteroids (3 currently) 
 	int waveSize = 2;
 	
 	//below stores {((Player)shapes[0][0]), bullets, asteroids, ufos, etc.}
 	Shape[][] shapes = new Shape[][] {{new Player(new float[][] {{300, 200}, {320, 200}, {310, 240}})}, new Bullet[0], new Asteroid[0]};
 	
 	@Override
-	public void create () {
+	public void create() {
 		sr = new ShapeRenderer();
+		batch = new SpriteBatch();
+		font = new BitmapFont();
 	}
 	
 	public void collisionDetection() {
@@ -83,15 +91,34 @@ public class Asteroids extends ApplicationAdapter {
 						}
 						
 						if (isColliding == true) {
-							Asteroid[] append = ((Asteroid) shapes[2][i]).split(random);
-							if (append.length != 0) {
-								shapes[2] = splitAsteroids(shapes[2], append);
+							if (x != 0) { //destroy asteroid
+								((Player)shapes[0][0]).setScore(((Player)shapes[0][0]).getScore() + 1);
+								Asteroid[] append = ((Asteroid) shapes[2][i]).split(random);
+								if (append.length != 0) {
+									shapes[2] = splitAsteroids(shapes[2], append);
+								}
+								shapes[x][k].setHasExpired(true);
 							}
-							shapes[x][k].setHasExpired(true);
+							else { //player has lost a life
+								if (((Player)shapes[0][0]).getLives() == 0) { //Game over
+									Gdx.app.exit();
+								}
+								
+								else {
+									((Player)shapes[0][0]).setLives(((Player)shapes[0][0]).getLives() - 1);
+									waveSize -= 2; //restarts the current wave TODO - MAYBE CHANGE
+									shapes[2] = newWave();
+									((Player)shapes[0][0]).setVelocity(new Vec2D(0, 0));
+									((Player)shapes[0][0]).translate(new Vec2D((width / 2) - shapes[0][0].getCentre()[0], (height / 2) - shapes[0][0].getCentre()[1]));
+									for (int z = 0; z < shapes[1].length; z++) {
+										shapes[1][z].setHasExpired(true);
+									}
+								}
+							}
 							
-							if (x == 0) {
-								Gdx.app.exit(); //TODO - TEMPORARY!!!
-							}
+							//if (x == 0) {
+							//	Gdx.app.exit(); //TODO - TEMPORARY!!!
+							//}
 							
 							break;
 						}
@@ -143,7 +170,7 @@ public class Asteroids extends ApplicationAdapter {
 			angle = random.nextDouble() * 2 * Math.PI;
 			magnitude = (random.nextDouble() + 1) * 0.5;
 			currentVel = new Vec2D(magnitude * Math.cos(angle), magnitude * Math.sin(angle));
-			result[i] = new Asteroid(asteroidVertices[0].clone(), new float[]{relWidth, relHeight}, 4, currentVel, angle);
+			result[i] = new Asteroid(asteroidVertices[random.nextInt(asteroidVertices.length)].clone(), new float[]{relWidth, relHeight}, 4, currentVel, angle);
 		}
 		return result;
 	}
@@ -216,13 +243,28 @@ public class Asteroids extends ApplicationAdapter {
 			Gdx.app.exit();
 		}
 	}
+	
+	public void renderText() {
+		batch.begin();
+		font.draw(batch, "Score: " + ((Player)shapes[0][0]).getScore(), 0, height);
+		batch.end();
+	}
+	
+	public void renderLives() {
+		int offset;
+		for (int i = 0; i < ((Player)shapes[0][0]).getLives(); i++) {
+			offset = 30 * i;
+			sr.triangle(1 + offset, 1, 20 + offset, 1, 10 + offset, 40);
+		}
+	}
 
 	@Override
-	public void render () { //TODO - LATER ON WHEN MORE THINGS ARE ADDED, ADD EVERYTHING TO A SINGLE ARRAY TO REDUCE CODE AMOUNT
+	public void render() { //TODO - LATER ON WHEN MORE THINGS ARE ADDED, ADD EVERYTHING TO A SINGLE ARRAY TO REDUCE CODE AMOUNT
 		Gdx.gl.glClearColor(0, 0, 0, 1);
 		Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 		
 		input();
+		renderText();
 		collisionDetection();
 		shapes = removeExpired(shapes);
 		
@@ -231,6 +273,7 @@ public class Asteroids extends ApplicationAdapter {
 		}
 		
 		sr.begin(ShapeType.Line);
+		renderLives();
 		for (int i = 0; i < shapes.length; i++) {
 			for (int x = 0; x < shapes[i].length; x++) {
 				shapes[i][x].update();
@@ -243,7 +286,9 @@ public class Asteroids extends ApplicationAdapter {
 	}
 	
 	@Override
-	public void dispose () {
+	public void dispose() {
 		sr.dispose();
+		batch.dispose();
+		font.dispose();
 	}
 }
